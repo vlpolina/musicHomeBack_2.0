@@ -1,0 +1,32 @@
+{% extends 'online_shop/base.html' %}
+
+{% block main %}
+
+<form method="post" class="">
+    {% csrf_token %}
+    <h1 class="my-5 text-center">{{ title }}</h1>
+    <div class="row mb-3" style="margin-left: 35%">
+        <label for="{{ form.username.id_for_label }}" class="col-md-3 col-form-label">{{ form.username.label }}:</label>
+        <div class="col-md-9">
+            {{ form.username }}
+        </div>
+        <label for="{{ form.email.id_for_label }}" class="col-md-3 col-form-label">{{ form.email.label }}:</label>
+        <div class="col-md-9">
+            {{ form.email }}
+        </div>
+        <label for="{{ form.password1.id_for_label }}" class="col-md-3 col-form-label">{{ form.password1.label }}:</label>
+        <div class="col-md-9">
+            {{ form.password1 }}
+        </div>
+        <label for="{{ form.password2.id_for_label }}" class="col-md-3 col-form-label">{{ form.password2.label }}:</label>
+        <div class="col-md-9">
+            {{ form.password2 }}
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-left: 44%">Зарегистрироваться</button><br>
+    <a href="{% url 'registrate' %}" style="margin-left: 45%">Уже с нами? Войти</a>
+</form>
+
+
+
+{% endblock %}
