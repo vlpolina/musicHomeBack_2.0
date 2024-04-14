@@ -63,13 +63,16 @@ class Category(models.Model):
 
 class Orders(models.Model):
     date = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
-    ID_client = models.ForeignKey('auth.User', on_delete=models.PROTECT, verbose_name="ID клиента")
-    ID_product = models.ForeignKey('Products', on_delete=models.PROTECT, verbose_name="ID товара")
-    status = models.TextField(verbose_name="Статус")
+    ID_client = models.ForeignKey('auth.User', on_delete=models.CASCADE, verbose_name="ID клиента")
+    ID_product = models.ForeignKey('Products', on_delete=models.CASCADE, verbose_name="ID товара")
+    count = models.IntegerField(verbose_name="Количество")
     sum_cost = models.FloatField(verbose_name="Сумма заказа")
-
-    def __str__(self):
-        return self.status
+    in_trash = models.BooleanField(default=False, verbose_name="В корзине")
+    in_liked = models.BooleanField(default=False, verbose_name="В избранном")
+    is_applying = models.BooleanField(default=False, verbose_name="Оформляется")
+    is_payed = models.BooleanField(default=False, verbose_name="Оплачен")
+    is_delivering = models.BooleanField(default=False, verbose_name="Доставляется")
+    is_delivered = models.BooleanField(default=False, verbose_name="Доставлен")
 
     def get_absolute_url(self):
         return reverse('orders', kwargs={'order_id': self.pk})
@@ -101,19 +104,4 @@ class Deliveries(models.Model):
         verbose_name = 'Поставки'
         verbose_name_plural = 'Поставки'
         ordering = ['date']
-
-#class Users(models.Model):
-  #  first_name = models.TextField()
-  #  last_name = models.TextField()
-   # email = models.EmailField()
-   # password = models.TextField()
-   # is_admin = models.BooleanField()
-
- #   class Meta:
-  #      verbose_name = 'Пользователи сайта'
-  #      verbose_name_plural = 'Пользователи сайта'
-        #ordering = []
-
-#def get_absolute_url(self):
- #   return reverse('post', kwards={})
 

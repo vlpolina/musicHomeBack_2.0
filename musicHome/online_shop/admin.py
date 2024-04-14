@@ -18,10 +18,10 @@ class CustomerAdmin(admin.ModelAdmin):
 
 
 class OrdersAdmin(admin.ModelAdmin):
-    list_display = ('id', 'date', 'ID_client', 'status')
+    list_display = ('id', 'date', 'ID_client')
     list_display_links = ('id', 'date')
     search_fields = ('id', 'date', 'ID_client')
-    list_filter = ('date', 'status')
+    list_filter = ('date', )
 
 
 class DeliveriesAdmin(admin.ModelAdmin):
