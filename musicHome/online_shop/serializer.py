@@ -11,6 +11,18 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'last_name', 'first_name']
 
 
+class CheckAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'is_superuser', 'is_staff']
+
+
+class UserIdSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id']
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -18,6 +30,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
+        # Проверка на существование пользователя по электронной почте или имени пользователя
+        if User.objects.filter(email=validated_data['email']).exists():
+            raise serializers.ValidationError(
+                {'email': 'Пользователь с таким адресом электронной почты уже существует'})
+        if User.objects.filter(username__iexact=validated_data['username']).exists():
+            raise serializers.ValidationError({'username': 'Пользователь с таким username уже существует'})
+
         user = User.objects.create_user(validated_data['username'], validated_data['email'], validated_data['password'])
 
         return user
@@ -26,7 +45,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class ProductCatalogSerializer(serializers.ModelSerializer):
     class Meta:
         model = Products
-        fields = ['id', 'slug', 'name', 'short_desc', 'cost', 'count', 'photo', 'cat_id']
+        fields = ['id', 'slug', 'name', 'short_desc', 'cost', 'count', 'photo', 'cat_id', 'custom_name']
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -38,6 +57,12 @@ class ProductSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
+        fields = ['id', 'name']
+
+
+class CustomersForCatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Customers
         fields = ['id', 'name']
 
 
@@ -59,6 +84,14 @@ class LikedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Orders
         fields = ['id', 'ID_client', 'ID_product', 'count', 'sum_cost', 'in_liked']
+
+
+class ProductCardSerializer(serializers.ModelSerializer):
+    ID_client = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Orders
+        fields = ['id', 'ID_client', 'ID_product', 'in_liked', 'in_trash']
 
 
 class AdminProductsSerializer(serializers.ModelSerializer):

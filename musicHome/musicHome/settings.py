@@ -75,6 +75,15 @@ REST_FRAMEWORK = {
     ]}
 #убрать комменты перед хостингом для того чтоб не менять ничего по api в браузере
 CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'cache-control',
+    'authorization'
+]
 
 ROOT_URLCONF = 'musicHome.urls'
 
@@ -141,7 +150,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'frontend/public', 'static')]
+# STATICFILES_DIRS = [os.path.join(BASE_DIR, 'frontend/public', 'static')]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field

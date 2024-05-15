@@ -13,6 +13,7 @@ class RegisterUser(generics.GenericAPIView):
     serializer_class = RegisterSerializer
 
     def post(self, request, *args, **kwargs):
+        # валидация на существующего пользователя
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid()
         user = serializer.save()
@@ -48,6 +49,15 @@ class LogoutView(APIView):
         return Response({'message': 'Logged out successfully'})
 
 
+# проверка роли администратора
+class CheckAdminView(APIView):
+    permission_classes = (IsAuthenticated, )
+
+    def get(self, request):
+        user = User.objects.get(id=request.user.id)
+        serializer = CheckAdminSerializer(user)
+        return Response(serializer.data)
+
 # получение данных пользователя
 class UserView(APIView):
     permission_classes = (IsAuthenticated, )
@@ -77,6 +87,13 @@ class CatalogCatList(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
 
+
+#получение поставщиков для фильтров в каталоге
+class CustomersForCatList(generics.ListAPIView):
+    queryset = Customers.objects.all()
+    serializer_class = CustomersForCatSerializer
+
+
 #получение всех опубликованных товаров
 class CatalogProductsList(generics.ListAPIView):
     queryset = Products.objects.filter(is_published=True)
@@ -101,12 +118,25 @@ class CatalogOneCatList(generics.ListAPIView):
 
 #получение 1 товара
 class ProductList(generics.ListAPIView):
-    serializer_class = ProductSerializer
 
-    def get_queryset(self):
-        slug = self.kwargs['slug']
-        queryset = Products.objects.filter(slug=slug, is_published=True)
-        return queryset
+    def get(self, request, slug):
+        try:
+            product = Products.objects.get(slug=slug, is_published=True)
+        except Products.DoesNotExist:
+            return Response({"error": "Product not found"}, status=404)
+
+        order = Orders.objects.filter(ID_product=product)
+        product_data = ProductSerializer(product).data
+        if order.exists():
+            order_data = ProductCardSerializer(order.first()).data
+        else:
+            order_data = None
+        response_data = {
+            "product": product_data,
+            "order": order_data
+        }
+
+        return Response(response_data)
 
 
 #добавить в корзину
@@ -114,6 +144,28 @@ class TrashAddView(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Orders.objects.all()
     serializer_class = TrashSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Получаем данные из запроса
+        product_id = request.data.get('ID_product')
+        client_id = request.user.id
+
+        # Пытаемся найти запись по указанным параметрам
+        order = Orders.objects.filter(ID_client=client_id, ID_product=product_id).first()
+
+        # Если запись найдена, устанавливаем is_liked в 1
+        if order:
+            order.in_trash = 1
+            order.save()
+            serializer = self.get_serializer(order)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Если запись не найдена, создаем новую запись
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 #получить записи из корзины
@@ -132,21 +184,82 @@ class TrashGetView(APIView):
                 "name": prods.name,
                 "count": prods.count,
                 "photo": "http://localhost:8000" + prods.photo.url,
+                "in_liked": trash.in_liked,
+                "count_buy": trash.count,
             }
             response_data.append(item)
         return Response(response_data)
 
 #удалить запись по id из корзины
 class TrashDeleteView(generics.DestroyAPIView):
-    queryset = Orders.objects.filter(in_trash=True)
+    queryset = Orders.objects.all()
     serializer_class = TrashSerializer
     permission_classes = (IsAuthenticated,)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Проверяем условия для удаления или обновления записи
+        if instance.in_liked == 0 and instance.is_applying == 0 and instance.is_payed == 0 and instance.is_delivered == 0:
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            # Устанавливаем is_liked в 0
+            instance.in_trash = 0
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+
+class TrashResetView(generics.UpdateAPIView):
+    queryset = Orders.objects.all()
+    serializer_class = TrashSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def update(self, request, *args, **kwargs):
+        # Получаем queryset со всеми записями, которые нужно изменить
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Обновляем in_liked в 0 для всех записей
+        queryset.update(in_trash=0)
+
+        # Удаляем записи, которые удовлетворяют условиям
+        queryset.filter(
+            in_liked=0,
+            is_applying=0,
+            is_payed=0,
+            is_delivered=0
+        ).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LikedAddView(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Orders.objects.all()
     serializer_class = LikedSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Получаем данные из запроса
+        product_id = request.data.get('ID_product')
+        client_id = request.user.id
+
+        # Пытаемся найти запись по указанным параметрам
+        order = Orders.objects.filter(ID_client=client_id, ID_product=product_id).first()
+
+        # Если запись найдена, устанавливаем is_liked в 1
+        if order:
+            order.in_liked = 1
+            order.save()
+            serializer = self.get_serializer(order)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Если запись не найдена, создаем новую запись
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class LikedGetView(APIView):
@@ -161,17 +274,82 @@ class LikedGetView(APIView):
                 "id": liked.id,
                 "cost": prods.cost,
                 "ID_product": liked.ID_product.id,
+                "slug": liked.ID_product.slug,
                 "name": prods.name,
-                "count": prods.count,
+                "short_desc": liked.ID_product.short_desc,
                 "photo": "http://localhost:8000" + prods.photo.url,
+                "in_trash": liked.in_trash,
+            }
+            response_data.append(item)
+        return Response(response_data)
+
+
+class StatusesForCatalogGetView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        prods = Orders.objects.select_related("ID_product")
+        response_data = []
+        for product in prods:
+            item = {
+                'order_id': product.id,
+                'product_id': product.ID_product.id,
+                'liked': product.in_liked,
+                'trash': product.in_trash
             }
             response_data.append(item)
         return Response(response_data)
 
 
 class LikedDeleteView(generics.DestroyAPIView):
-    queryset = Orders.objects.filter(in_liked=True)
+    queryset = Orders.objects.all()
     serializer_class = LikedSerializer
     permission_classes = (IsAuthenticated,)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Проверяем условия для удаления или обновления записи
+        if instance.in_trash == 0 and instance.is_applying == 0 and instance.is_payed == 0 and instance.is_delivered == 0:
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            # Устанавливаем is_liked в 0
+            instance.in_liked = 0
+            instance.save()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+
+
+class LikedResetView(generics.UpdateAPIView):
+    queryset = Orders.objects.all()
+    serializer_class = LikedSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def update(self, request, *args, **kwargs):
+        # Получаем queryset со всеми записями, которые нужно изменить
+        queryset = self.filter_queryset(self.get_queryset())
+
+        # Обновляем in_liked в 0 для всех записей
+        queryset.update(in_liked=0)
+
+        # Удаляем записи, которые удовлетворяют условиям
+        queryset.filter(
+            in_trash=0,
+            is_applying=0,
+            is_payed=0,
+            is_delivered=0
+        ).delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class UserIdView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request):
+        user = User.objects.get(id=request.user.id)
+        serializer = UserIdSerializer(user)
+        return Response(serializer.data)
 
 
