@@ -1,4 +1,5 @@
 from rest_framework import generics, viewsets
+from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.views import APIView
 from .permissions import IsOwnerOrReadOnly
@@ -344,12 +345,109 @@ class LikedResetView(generics.UpdateAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class UserIdView(APIView):
+class CreateOrderView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def put(self, request):
+        products = request.data.get('products', [])
+        address = request.data.get('address')
+        client_phone = request.data.get('client_phone')
+        payment = request.data.get('payment')
+        ID_client = request.data.get('ID_client')
+
+        for product_data in products:
+            ID_product = product_data.get('ID_product')
+            count = product_data.get('count')
+            sum_cost = product_data.get('sum_cost')
+
+            orders = Orders.objects.filter(ID_product=ID_product, ID_client=ID_client, in_trash=1)
+            for order in orders:
+                order.count = count
+                order.sum_cost = sum_cost
+                order.address = address
+                order.client_phone = client_phone
+                order.payment = payment
+                order.in_trash = 0
+                order.is_applying = 1
+                order.save()
+
+        return Response(status=status.HTTP_200_OK)
+
+    def post(self, request):
+        try:
+            email = 'vlasova2002polina18@mail.ru'
+            subject = 'MusicHome. Оформление заказа.'
+            message = f'Здравствуйте!\n\nВы оформили заказ в интернет-магазине музыкальных инструментов "musicHome" на сумму: 40200 рублей.\nВаш заказ:\n - Укулеле ENYA EUC-20: 3 шт. - 22500 руб.\n - Синтезатор ROCKDALE PREVIERE 2: 1 шт. - 17700 руб.\n\nУведомляем Вас, что в системе магазина несколько инструментов, заказанных одновременно, доставляются и оплачиваются по отдельности и считаются отдельными заказами. Вы можете отслеживать статусы своих заказов в личном кабинете на нашем сайте.\n\nЕсли Вы не оформляли заказ, можете обратиться в техническую поддержку магазина, заполнив форму по ссылке ниже:\nhttps://forms.yandex.ru/cloud/6631f2d97c1515e8e45e3240/\n\nС уважением, команда MusicHome.'
+            from_email = 'musichomeforyou@gmail.com'
+            recipient_list = [email]
+            sending = "Отправлено!"
+            send_mail(subject, message, from_email, recipient_list)
+
+            return Response({"status": "success", "message": sending}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class OrdersGetView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
-        user = User.objects.get(id=request.user.id)
-        serializer = UserIdSerializer(user)
-        return Response(serializer.data)
+        orders = Orders.objects.filter(is_applying=True).select_related("ID_product")
+        response_data = []
+        for products in orders:
+            prods = products.ID_product
+            item = {
+                "id": products.id,
+                "sumCost": products.sum_cost,
+                "count": products.count,
+                "name": prods.name,
+                "applying": products.is_applying,
+                "payed": products.is_payed,
+                "delivering": products.is_delivering,
+                "delivered": products.is_delivered,
+            }
+            response_data.append(item)
+        return Response(response_data)
 
+
+class EmailForPassword(APIView):
+    parser_classes = [JSONParser]
+
+    def post(self, request):
+        try:
+            data = request.data
+            email = data['email']
+            subject = 'MusicHome. Восстановление пароля.'
+            message = f'Здравствуйте!\n\nВы запросили сброс пароля для своего аккаунта на musicHome.\nЧтобы восстановить пароль, перейдите по этой ссылке:\n\nhttp://localhost:8000/reset-password/hg12Sa2\n\nЕсли вы не запрашивали сброс пароля, проигнорируйте это письмо.\n\nС уважением, команда MusicHome.'
+            from_email = 'musichomeforyou@gmail.com'
+            # password = 'f1BLhKKiv3EXCVY9UY3H'
+            recipient_list = [email]
+            sending = "Отправлено!"
+            send_mail(subject, message, from_email, recipient_list)
+
+            return Response({"status": "success", "message": sending}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class SendEmail(APIView):
+    parser_classes = [JSONParser]
+
+    def post(self, request):
+        try:
+            email = 'vlasova2002polina18@mail.ru'
+            # subject = 'MusicHome. Ваш заказ уже в пути!'
+            # subject = 'MusicHome. Заказ уже почти у Вас!'
+            subject = 'MusicHome. Заказ доставлен и оплачен!'
+            # message = f'Здравствуйте!\n\nВы оформляли заказ в интернет-магазине музыкальных инструментов "musicHome" - Укулеле ENYA EUC-20: 3 шт. - 22500 руб. уже в пути!\n\nУведомляем Вас, что в системе магазина несколько инструментов, заказанных одновременно, доставляются и оплачиваются по отдельности и считаются отдельными заказами. Вы можете отслеживать статусы своих заказов в личном кабинете на нашем сайте.\n\nЕсли Вы не оформляли заказ, можете обратиться в техническую поддержку магазина, заполнив форму по ссылке ниже:\nhttps://forms.yandex.ru/cloud/6631f2d97c1515e8e45e3240/\n\nС уважением, команда MusicHome.'
+            # message = f'Здравствуйте!\n\nВы оформляли заказ в интернет-магазине музыкальных инструментов "musicHome".\nУкулеле ENYA EUC-20: 3 шт. - 22500 руб. уже в Вашем городе, ожидайте курьера в течение следующего рабочего дня. Курьер дополнительно свяжется с Вами для обсуждения удобного Вам времени доставки.\n\nУведомляем Вас, что в системе магазина несколько инструментов, заказанных одновременно, доставляются и оплачиваются по отдельности и считаются отдельными заказами. Вы можете отслеживать статусы своих заказов в личном кабинете на нашем сайте.\n\nЕсли Вы не оформляли заказ, можете обратиться в техническую поддержку магазина, заполнив форму по ссылке ниже:\nhttps://forms.yandex.ru/cloud/6631f2d97c1515e8e45e3240/\n\nС уважением, команда MusicHome.'
+            message = f'Здравствуйте!\n\nВаш заказ в интернет-магазине музыкальных инструментов "musicHome" "Укулеле ENYA EUC-20": 3 шт. - 22500 руб. Успешно доставлен и оплачен!\n\nБлагодарим Вас за покупку и ждем Ваших будущих заказов :)\n\nУведомляем Вас, что в системе магазина несколько инструментов, заказанных одновременно, доставляются и оплачиваются по отдельности и считаются отдельными заказами. Вы можете отслеживать статусы своих заказов в личном кабинете на нашем сайте.\n\nС уважением, команда MusicHome.'
+            from_email = 'musichomeforyou@gmail.com'
+            recipient_list = [email]
+            sending = "Отправлено!"
+            send_mail(subject, message, from_email, recipient_list)
+
+            return Response({"status": "success", "message": sending}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"status": "error", "message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'online_shop.apps.OnlineShopConfig',
+    'drf_yasg',
 ]
 
 MIDDLEWARE = [
@@ -200,6 +201,15 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_REFRESH_SERIALIZER": "rest_framework_simplejwt.serializers.TokenRefreshSlidingSerializer",
 }
 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'musichomeforyou@gmail.com'
+EMAIL_HOST_PASSWORD = 'ynay eoyt jsug djbd'
+EMAIL_USE_TLS = True
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 # SOCIAL_AUTH_VK_OAUTH2_KEY = '7363441'
 # SOCIAL_AUTH_VK_OAUTH2_SECRET = 'tG23sAGJeEA46Odcmb6N'
 #
@@ -208,3 +218,13 @@ SIMPLE_JWT = {
 #     'rest_framework_social_oauth2.backends.DjangoOAuth2',
 #     'django.contrib.auth.backends.ModelBackend',
 # )
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    }
+}

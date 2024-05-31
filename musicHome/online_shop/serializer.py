@@ -8,7 +8,7 @@ from datetime import date
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'last_name', 'first_name']
+        fields = ['id', 'email', 'last_name', 'first_name']
 
 
 class CheckAdminSerializer(serializers.ModelSerializer):
@@ -51,7 +51,7 @@ class ProductCatalogSerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Products
-        fields = ['id', 'slug', 'name', 'long_desc', 'cost', 'count', 'photo', 'cat_id', 'custom_name']
+        fields = ['id', 'slug', 'name', 'long_desc', 'short_desc', 'cost', 'count', 'photo', 'cat_id', 'custom_name']
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -74,6 +74,26 @@ class TrashSerializer(serializers.ModelSerializer):
     class Meta:
         model = Orders
         fields = ['id', 'ID_client', 'ID_product', 'count', 'sum_cost', 'in_trash']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    ID_client = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    date = date.today()
+    in_trash = serializers.HiddenField(default=1)
+
+    class Meta:
+        model = Orders
+        fields = ['id', 'ID_client', 'ID_product', 'count', 'sum_cost', 'in_trash', 'is_applying', 'phone', 'address', 'payment']
+
+
+class CreatedOrdersSerializer(serializers.ModelSerializer):
+    ID_client = serializers.HiddenField(default=serializers.CurrentUserDefault())
+    date = date.today()
+    in_trash = serializers.HiddenField(default=1)
+
+    class Meta:
+        model = Orders
+        fields = ['id', 'ID_client', 'ID_product', 'count', 'sum_cost', 'is_applying', 'is_payed', 'is_delivering', 'is_delivered', 'address', 'payment']
 
 
 class LikedSerializer(serializers.ModelSerializer):

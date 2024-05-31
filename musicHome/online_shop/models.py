@@ -1,6 +1,5 @@
 from django.db import models
 from django.urls import reverse
-from django.contrib.auth.models import User
 
 
 class Products(models.Model):
@@ -67,6 +66,9 @@ class Orders(models.Model):
     ID_product = models.ForeignKey('Products', on_delete=models.CASCADE, verbose_name="ID товара")
     count = models.IntegerField(verbose_name="Количество")
     sum_cost = models.FloatField(verbose_name="Сумма заказа")
+    client_phone = models.TextField(default='', verbose_name="Номер телефона клиента")
+    address = models.TextField(default='', verbose_name="Адрес доставки")
+    payment = models.TextField(default='', verbose_name="Способ оплаты")
     in_trash = models.BooleanField(default=False, verbose_name="В корзине")
     in_liked = models.BooleanField(default=False, verbose_name="В избранном")
     is_applying = models.BooleanField(default=False, verbose_name="Оформляется")
